@@ -101,34 +101,35 @@
             return;
         }
 
-        // Make both AJAX requests concurrently
+        // Prepare data for AJAX
         let amazonRequest = amazonUrl
             ? fetch('/amazon', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ url: amazonUrl })
-            })
-            : null;
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ url: amazonUrl }),
+              })
+            : Promise.resolve({ json: () => null });
 
         let flipkartRequest = flipkartUrl
             ? fetch('/flipkart', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ url: flipkartUrl })
-            })
-            : null;
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ url: flipkartUrl }),
+              })
+            : Promise.resolve({ json: () => null });
 
-        // Process the results once all requests are completed
-        Promise.all([amazonRequest, flipkartRequest].filter(Boolean)) // Filter out null requests
-            .then(responses => Promise.all(responses.map(response => response.json())))
-            .then(data => {
+        // Process the results once both are completed
+        Promise.all([amazonRequest, flipkartRequest])
+            .then((responses) => Promise.all(responses.map((response) => response.json())))
+            .then((data) => {
                 let resultElement = document.getElementById('result');
-                let amazonData = data[0]?.success ? data[0].data : null;
-                let flipkartData = data[1]?.success ? data[1].data : null;
+
+                let amazonData = data[0]?.data;
+                let flipkartData = data[1]?.data;
 
                 resultElement.innerHTML = `
                     <table>
@@ -140,32 +141,43 @@
                             <th>From</th>
                             <th>URL</th>
                         </tr>
-                        ${amazonData ? `
+                        ${
+                            amazonData
+                                ? `
                         <tr>
                             <td>1</td>
                             <td>${amazonData.name}</td>
                             <td>${amazonData.price}</td>
-                            <td><img src="${amazonData.image}" alt="Product Image" width="100"></td>
+                            <td><img src="${amazonData.image}" alt="Product Image"></td>
                             <td>Amazon</td>
                             <td><a href="${amazonUrl}" target="_blank">${amazonUrl}</a></td>
-                        </tr>` : ''}
-                        ${flipkartData ? `
+                        </tr>
+                        `
+                                : ''
+                        }
+                        ${
+                            flipkartData
+                                ? `
                         <tr>
                             <td>${amazonData ? 2 : 1}</td>
                             <td>${flipkartData.name}</td>
                             <td>${flipkartData.price}</td>
-                            <td><img src="${flipkartData.image}" alt="Product Image" width="100"></td>
+                            <td><img src="${flipkartData.image}" alt="Product Image"></td>
                             <td>Flipkart</td>
                             <td><a href="${flipkartUrl}" target="_blank">${flipkartUrl}</a></td>
-                        </tr>` : ''}
+                        </tr>
+                        `
+                                : ''
+                        }
                     </table>
                 `;
             })
-            .catch(error => {
+            .catch((error) => {
                 document.getElementById('result').innerHTML = `<p class="error">An error occurred: ${error}</p>`;
             });
     });
 </script>
+
 
 
 </body>
